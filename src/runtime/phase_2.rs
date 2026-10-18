@@ -38,6 +38,8 @@ pub fn phase_2(mesh: &mut Vec<Neuron>, tic: usize, shots: &mut Vec<Shot>, events
                 10 => "DRN".to_string(),
                 11 => format!("VGb(g={})", shot.gaba_dose),
                 12 => format!("LIK(e={})", shot.enkephalin_dose),
+                15 => format!("ANTI(g={})", shot.gaba_dose),
+                16 => "OWN!".to_string(),
                 _ => match n.neuron_type {
                     NeuronType::StartRecord => "REC!".to_string(),
                     NeuronType::Flash => "FLASH!".to_string(),

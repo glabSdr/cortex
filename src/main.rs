@@ -4,8 +4,8 @@ mod runtime;
 mod persistence;
 mod mesh;
 
-use crate::neuron::Shot;
 use crate::mesh::ActivityRecorder;
+use crate::neuron::Shot;
 use crate::runtime::NeuronEvent;
 
 fn main() {
@@ -28,14 +28,22 @@ fn main() {
 
     helpers::log_header();
 
-    for tic in 1..=80 {
+    for tic in 1..=100 {
         // Threat injection at tick 20
         if tic == 20 {
             mesh[8].glut = 100;
         }
+        // Own injection at tick 38 (modulates Liking & Threat)
+        if tic == 38 {
+            mesh[16].glut = 50;
+        }
         // Liking injection at tick 40
         if tic == 40 {
             mesh[12].glut = 100;
+        }
+        // Antireward injection at tick 60
+        if tic == 60 {
+            mesh[15].glut = 100;
         }
 
         let mut shots: Vec<Shot> = Vec::new();

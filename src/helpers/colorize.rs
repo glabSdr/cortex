@@ -30,3 +30,4 @@ pub fn colorize(event: &NeuronEvent, mesh: &[Neuron]) -> String {
     // No marker association — plain
     event.label.clone()
 }
+

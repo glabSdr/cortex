@@ -25,9 +25,9 @@ struct MarkerColor {
 const MARKER_COLORS: &[MarkerColor] = &[
     MarkerColor { id: 8,  bold: "\x1b[1;31m", normal: "\x1b[31m" },   // Threat/BLA  → Red
     MarkerColor { id: 12, bold: "\x1b[1;32m", normal: "\x1b[32m" },   // Liking      → Green
+    MarkerColor { id: 15, bold: "\x1b[1;34m", normal: "\x1b[34m" },   // Antireward  → Blue
+    MarkerColor { id: 16, bold: "\x1b[1;33m", normal: "\x1b[33m" },   // Own         → Yellow
     // Future markers:
-    // MarkerColor { id: ??, bold: "\x1b[1;33m", normal: "\x1b[33m" }, // Own         → Yellow
-    // MarkerColor { id: ??, bold: "\x1b[1;34m", normal: "\x1b[34m" }, // Antireward  → Blue
     // MarkerColor { id: ??, bold: "\x1b[1;35m", normal: "\x1b[35m" }, // Novel       → Magenta
     // MarkerColor { id: ??, bold: "\x1b[1;36m", normal: "\x1b[36m" }, // Assumption  → Cyan
 ];
