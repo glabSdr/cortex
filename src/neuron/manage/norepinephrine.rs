@@ -1,18 +1,18 @@
 use crate::neuron::Neuron;
 
-// Норадреналин → glut_gate, gaba_gate + пластичность
+// Norepinephrine → glut_gate, gaba_gate + plasticity
 //
-// 1. Модуляция входных порогов (контраст):
-//    α1 → glut_gate ↓, gaba_gate ↓  // "слышу всё громче"
-//    α2 → out_gate ↑                 // самоторможение (преимущественно LC)
+// 1. Modulation of input thresholds (contrast):
+//    α1 → glut_gate ↓, gaba_gate ↓  // "hearing everything louder"
+//    α2 → out_gate ↑                 // self-inhibition (mainly LC)
 //
-// 2. Усиление пластичности (β1):
-//    Если нейрон firing + DA присутствует + NE присутствует:
-//    synaptic_weight delta умножается на β1 множитель.
-//    "Эмоциональные события запоминаются сильнее"
+// 2. Plasticity enhancement (β1):
+//    If the neuron is firing + DA is present + NE is present:
+//    synaptic_weight delta is multiplied by the β1 multiplier.
+//    "Emotional events are remembered more strongly"
 //
-// NE распространяется диффузно (broadcast), как DA.
-// LC покрывает практически весь мозг — broadcast на все группы.
+// NE spreads diffusely (broadcast), like DA.
+// LC covers practically the entire brain — broadcast to all groups.
 
 const NE_TAKE: u16 = 2;
 
@@ -68,14 +68,14 @@ impl Neuron {
     pub fn norepinephrine_apply(&mut self) {
         let (a1, a2) = self.download_norepinephrine();
 
-        // ── 1. α1: снижает glut_gate и gaba_gate (контраст) ──
+        // ── 1. α1: lowers glut_gate and gaba_gate (contrast) ──
         let a1_effect = (a1 * self.a1_sensitivity / 255).min(u8::MAX as u16);
         if a1_effect > 0 {
             self.glut_gate = self.glut_gate.saturating_sub(a1_effect);
             self.gaba_gate = self.gaba_gate.saturating_sub(a1_effect);
         }
 
-        // ── 2. α2: повышает out_gate (самоторможение LC) ──
+        // ── 2. α2: raises out_gate (LC self-inhibition) ──
         let a2_effect = (a2 * self.a2_sensitivity / 255).min(u8::MAX as u16);
         if a2_effect > 0 {
             self.out_gate = self.out_gate.saturating_add(a2_effect);
@@ -84,9 +84,9 @@ impl Neuron {
         self.norepinephrine = 0;
     }
 
-    /// β1 множитель для пластичности.
-    /// Вызывается из dopamine_apply при расчёте delta.
-    /// Возвращает множитель: 1 без NE, >1 с NE.
+    /// β1 multiplier for plasticity.
+    /// Called from dopamine_apply when computing delta.
+    /// Returns the multiplier: 1 without NE, >1 with NE.
     pub fn beta1_plasticity_multiplier(&self, ne_amount: u16) -> u16 {
         if self.b1_sensitivity == 0 || ne_amount < self.b1_gate {
             return 1;

@@ -1,19 +1,19 @@
 use crate::neuron::Neuron;
 
-// Серотонин → out_gate (двунаправленно)
+// Serotonin → out_gate (bidirectional)
 //
-// 1. Модуляция порога возбудимости:
-//    5-HT1A → out_gate ↑  // "не дёргайся", подавление импульсов
-//                          // на DRN — ауторецептор (самоторможение, как α2 на LC)
-//    5-HT2A → out_gate ↓  // "слышу ярче", усиление сенсорного входа
+// 1. Modulation of excitability threshold:
+//    5-HT1A → out_gate ↑  // "don't twitch", impulse suppression
+//                          // on DRN — autoreceptor (self-inhibition, like α2 on LC)
+//    5-HT2A → out_gate ↓  // "hear brighter", sensory input amplification
 //
-// Баланс 1A/2A = переключатель режимов:
-//    высокий 1A → спокойствие, терпение
-//    высокий 2A → гибкость, чувствительность
-//    оба низкие → импульсивность, агрессия
+// 1A/2A balance = mode switch:
+//    high 1A → calm, patience
+//    high 2A → flexibility, sensitivity
+//    both low → impulsivity, aggression
 //
-// 5-HT распространяется диффузно (broadcast), как DA и NE.
-// DRN покрывает кору, лимбику, базальные ганглии.
+// 5-HT spreads diffusely (broadcast), like DA and NE.
+// DRN covers the cortex, limbic system, basal ganglia.
 
 const HT_TAKE: u16 = 2;
 
@@ -69,13 +69,13 @@ impl Neuron {
     pub fn serotonin_apply(&mut self) {
         let (ht1a, ht2a) = self.download_serotonin();
 
-        // ── 1. 5-HT1A: повышает out_gate (тормоз, "подожди") ──
+        // ── 1. 5-HT1A: raises out_gate (inhibition, "wait") ──
         let ht1a_effect = (ht1a * self.ht1a_sensitivity / 255).min(u8::MAX as u16);
         if ht1a_effect > 0 {
             self.out_gate = self.out_gate.saturating_add(ht1a_effect);
         }
 
-        // ── 2. 5-HT2A: понижает out_gate (возбуждение, "ярче") ──
+        // ── 2. 5-HT2A: lowers out_gate (excitation, "brighter") ──
         let ht2a_effect = (ht2a * self.ht2a_sensitivity / 255).min(u8::MAX as u16);
         if ht2a_effect > 0 {
             self.out_gate = self.out_gate.saturating_sub(ht2a_effect);

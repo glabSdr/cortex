@@ -1,22 +1,22 @@
 use crate::neuron::Neuron;
 
-// Дофамин → out_gate + пластичность
+// Dopamine → out_gate + plasticity
 //
-// 1. Модуляция out_gate:
-//    D1 → out_gate -= amount   // "стреляй легче"
-//    D2 → out_gate += amount   // "стреляй труднее"
+// 1. Modulation of out_gate:
+//    D1 → out_gate -= amount   // "fire more easily"
+//    D2 → out_gate += amount   // "fire with more difficulty"
 //
-// 2. Пластичность (правило трёх факторов):
-//    Пресинаптический нейрон стрелял (source.from был active) +
-//    Постсинаптический нейрон стрелял (self.firing) +
-//    DA присутствует →
-//    D1: source.weight ↑ (LTP, связь укрепляется)
-//    D2: source.weight ↓ (LTD, связь ослабевает)
+// 2. Plasticity (three-factor rule):
+//    Presynaptic neuron fired (source.from was active) +
+//    Postsynaptic neuron fired (self.firing) +
+//    DA present →
+//    D1: source.weight ↑ (LTP, connection strengthens)
+//    D2: source.weight ↓ (LTD, connection weakens)
 //
-//    Пластичность на ВХОДЯЩИХ связях (sources), решает получатель.
+//    Plasticity on INCOMING connections (sources), decided by the receiver.
 
 const DOPAMINE_TAKE: u16 = 2;
-const PLASTICITY_BASE_DELTA: u16 = 3; // bdnf_weight_delta, в будущем из генетики
+const PLASTICITY_BASE_DELTA: u16 = 3; // bdnf_weight_delta, from genetics in the future
 
 impl Neuron {
     pub fn diffuse_dopamine(&mut self, dopamine: u16) {
@@ -70,28 +70,28 @@ impl Neuron {
     pub fn apply_dopamine(&mut self, active_neurons: &[bool]) {
         let (d1, d2) = self.download_dopamine();
 
-        // ── 1. Модуляция out_gate ──
+        // ── 1. Modulation of out_gate ──
         let d1_effect = (d1 * self.d1_sensitivity / 255).min(u8::MAX as u16);
         let d2_effect = (d2 * self.d2_sensitivity / 255).min(u8::MAX as u16);
 
         self.out_gate = self.out_gate.saturating_sub(d1_effect);
         self.out_gate = self.out_gate.saturating_add(d2_effect);
 
-        // ── 2. Пластичность (три фактора: pre fired + post fired + DA) ──
+        // ── 2. Plasticity (three factors: pre fired + post fired + DA) ──
         if !self.fired_this_tic { return; }
         if d1_effect == 0 && d2_effect == 0 { return; }
 
         for source in self.sources.iter_mut() {
-            // Пресинаптический нейрон должен был быть активен в этот тик
+            // The presynaptic neuron must have been active this tick
             if !active_neurons[source.from] { continue; }
 
-            // D1: LTP — укрепить входящую связь
+            // D1: LTP — strengthen the incoming connection
             if d1_effect > 0 {
                 let strengthen = PLASTICITY_BASE_DELTA * d1_effect / 255;
                 source.weight = source.weight.saturating_add(strengthen).min(u8::MAX as u16);
             }
 
-            // D2: LTD — ослабить входящую связь
+            // D2: LTD — weaken the incoming connection
             if d2_effect > 0 {
                 let weaken = PLASTICITY_BASE_DELTA * d2_effect / 255;
                 source.weight = source.weight.saturating_sub(weaken);

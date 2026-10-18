@@ -5,18 +5,35 @@ mod update;
 mod read;
 mod create;
 mod connect;
+mod cache;
 
-use tokio_postgres::Client;
+use serde::{Deserialize, Serialize};
+use postgres::Client;
 
 #[derive(Debug, Clone)]
 pub struct SearchResult {
     pub id: i64,
     pub value: String,
-    pub score: f64,  // cosine similarity: 1.0 = идентично, 0.0 = ортогонально
+    pub from_id: Option<i64>,
+    pub to_id: Option<i64>,
+    pub score: f64,
 }
 
 pub struct Bridge {
     client: Client,
+    redis: redis::Connection,
     vector_dim: i32,
     novelty_threshold: f64,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CachedRecord {
+    pub id: i64,
+    pub value: String,
+    pub from_id: Option<i64>,
+    pub to_id: Option<i64>,
+}
+
+pub type StoreError = Box<dyn std::error::Error + Send + Sync>;
+
+const CACHE_TTL_SEC: u64 = 86400;

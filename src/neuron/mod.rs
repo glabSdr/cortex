@@ -1,41 +1,41 @@
 
 
-//Да, каждый модулятор влияет на конкретные gate, но каждый — на свой и по-своему.
-// Норадреналин → glut_gate и gaba_gate (оба)
+//Yes, each modulator affects specific gates, but each in its own way.
+// Norepinephrine → glut_gate and gaba_gate (both)
 //
-// НЕ снижает оба входных порога. Нейрон начинает «слышать» больше — и глутамата, и ГАМК. Кажется контрпродуктивным: зачем слышать больше тормоза? Но эффект — усиление контраста. Без НЕ: сильный сигнал = 100, шум = 30, gate = 40. Сигнал проходит (100 > 40), шум отсечён (30 < 40). С НЕ: gate снижается до 15. Сигнал проходит (100 > 15), шум тоже проходит (30 > 15). Но разница 100 vs 30 теперь видна в полном масштабе, а не обрезана на уровне 40. Нейрон получает более точную картину распределения входов. Сильное остаётся сильным, слабое видно как слабое, а не обрезано до нуля.
+// NE lowers both input thresholds. The neuron starts "hearing" more — both glutamate and GABA. Seems counterproductive: why hear more inhibition? But the effect is contrast enhancement. Without NE: strong signal = 100, noise = 30, gate = 40. The signal passes (100 > 40), noise is cut off (30 < 40). With NE: gate drops to 15. The signal passes (100 > 15), noise also passes (30 > 15). But the difference between 100 and 30 is now visible at full scale, not clipped at the level of 40. The neuron gets a more precise picture of the input distribution. Strong stays strong, weak is seen as weak, not clipped to zero.
 //
 // NE → glut_gate -= amount
 // NE → gaba_gate -= amount
-// // "слышу всё громче"
+// // "hearing everything louder"
 //
 
 //
-// Ацетилхолин → glut_gate (избирательно)
+// Acetylcholine → glut_gate (selectively)
 //
-// ACh снижает glut_gate не на всех нейронах, а только на тех, которые обслуживают текущий фокус внимания. Остальным не меняет ничего или даже повышает. Это пространственный фильтр: «вот эти входы важны, остальные нет».
+// ACh lowers glut_gate not on all neurons, but only on those serving the current focus of attention. For the rest it changes nothing, or even raises it. This is a spatial filter: "these inputs matter, the rest don't."
 //
-// ACh → glut_gate -= amount (на целевых)
-// ACh → glut_gate += amount (на нецелевых)  // опционально
-// // "слышу только это"
+// ACh → glut_gate -= amount (on targets)
+// ACh → glut_gate += amount (on non-targets)  // optional
+// // "hearing only this"
 //
-// Серотонин → out_gate (глобально, в обе стороны)
+// Serotonin → out_gate (globally, in both directions)
 //
-// Серотонин сложнее остальных потому что через разные рецепторы делает противоположное. Но если упростить до одного эффекта: серотонин повышает out_gate глобально. Текущий активный процесс уже выше порога — он продолжает работать. Новые стимулы, которые раньше были чуть выше порога, теперь ниже — они не могут прервать текущий процесс.
+// Serotonin is more complex than the rest because through different receptors it does the opposite. But simplified to one effect: serotonin raises out_gate globally. The currently active process is already above threshold — it keeps running. New stimuli that used to be slightly above threshold are now below it — they can't interrupt the current process.
 //
-// 5-HT (1A) → out_gate += amount  // "не отвлекайся, держи текущий процесс"
-// 5-HT (2A) → out_gate -= amount  // "ломай текущий паттерн" (психоделики)
+// 5-HT (1A) → out_gate += amount  // "don't get distracted, hold the current process"
+// 5-HT (2A) → out_gate -= amount  // "break the current pattern" (psychedelics)
 //
-// Сводка
-// Модулятор	Куда бьёт	Направление	Эффект в одном слове
-// Норадреналин	glut_gate, gaba_gate	↓ оба	Громче
-// Дофамин (D1)	out_gate	↓	Легче
-// Дофамин (D2)	out_gate	↑	Труднее
-// Ацетилхолин	glut_gate (избирательно)	↓ на целевых	Фокус
-// Серотонин (1A)	out_gate	↑	Стабильнее
-// Серотонин (2A)	out_gate	↓	Подвижнее
+// Summary
+// Modulator	Where it hits	Direction	Effect in one word
+// Norepinephrine	glut_gate, gaba_gate	↓ both	Louder
+// Dopamine (D1)	out_gate	↓	Easier
+// Dopamine (D2)	out_gate	↑	Harder
+// Acetylcholine	glut_gate (selectively)	↓ on targets	Focus
+// Serotonin (1A)	out_gate	↑	More stable
+// Serotonin (2A)	out_gate	↓	More flexible
 //
-// Четыре модулятора, три gate, шесть операций. Вся оркестрация — это комбинация этих шести операций на разных группах нейронов с разной интенсивностью.
+// Four modulators, three gates, six operations. All orchestration is a combination of these six operations across different neuron groups at different intensities.
 
 use serde::{Deserialize, Serialize};
 
@@ -55,6 +55,11 @@ pub enum Program {
     None
 }
 
+#[derive(Serialize, Deserialize)]
+pub enum NeuronType {
+    Logic,
+    ThalamusCorticalToCortex,
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Source {
@@ -76,6 +81,8 @@ pub struct Shot {
 #[derive(Serialize, Deserialize)]
 pub struct Neuron {
     pub id: usize,
+
+    pub neuron_type: NeuronType,
 
     pub sources: Vec<Source>,
 

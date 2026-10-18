@@ -9,22 +9,22 @@ use crate::persistence::mesh::read_all::read_all;
 pub fn save(neurons: Vec<Neuron>) {
     let path = Path::new("./").join(MESH_FILE);
 
-    // Читаем текущее состояние
+    // Read the current state
     let mut existing: HashMap<usize, Neuron> = read_all()
         .into_iter()
         .map(|n| (n.id, n))
         .collect();
 
-    // Применяем обновления
+    // Apply updates
     for neuron in neurons {
         existing.insert(neuron.id, neuron);
     }
 
-    // Собираем и сортируем по id
+    // Collect and sort by id
     let mut all: Vec<Neuron> = existing.into_values().collect();
     all.sort_by_key(|n| n.id);
 
-    // Перезаписываем файл
+    // Rewrite the file
     let file = File::create(&path).expect("failed to create mesh file");
     let mut writer = BufWriter::new(file);
 
