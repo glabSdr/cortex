@@ -1,4 +1,4 @@
-use crate::neuron::{Neuron, Shot};
+use crate::neuron::{Neuron, NeuronType, Shot};
 
 impl Neuron {
     fn glut_after_gate(&mut self) -> u16 {
@@ -34,21 +34,25 @@ impl Neuron {
 }
 
 impl Neuron {
-    fn fire (&mut self) -> Shot {
+    fn fire(&mut self) -> Shot {
         self.fired_this_tic = true;
         self.glut_out_balance = self.glut_out_balance.saturating_sub(self.glut_dose);
         self.gaba_out_balance = self.gaba_out_balance.saturating_sub(self.gaba_dose);
         self.dopamine_out_balance = self.dopamine_out_balance.saturating_sub(self.dopamine_dose);
+        self.enkephalin_out_balance = self.enkephalin_out_balance.saturating_sub(self.enkephalin_dose);
+        self.dynorphin_out_balance = self.dynorphin_out_balance.saturating_sub(self.dynorphin_dose);
+        self.serotonin_out_balance = self.serotonin_out_balance.saturating_sub(self.serotonin_dose);
+        self.ne_out_balance = self.ne_out_balance.saturating_sub(self.ne_dose);
 
         self.refractory = self.refractory_after_fire;
-
 
         Shot {
             from: self.id,
             glut_dose: self.glut_dose,
             gaba_dose: self.gaba_dose,
             dopamine_dose: self.dopamine_dose,
-            execute: self.programs.clone(),
+            enkephalin_dose: self.enkephalin_dose,
+            dynorphin_dose: self.dynorphin_dose,
             targets: self.targets.clone(),
         }
     }
@@ -66,6 +70,10 @@ impl Neuron {
             || self.glut_out_balance < self.glut_dose
             || self.gaba_out_balance < self.gaba_dose
             || self.dopamine_out_balance < self.dopamine_dose
+            || self.enkephalin_out_balance < self.enkephalin_dose
+            || self.dynorphin_out_balance < self.dynorphin_dose
+            || self.serotonin_out_balance < self.serotonin_dose
+            || self.ne_out_balance < self.ne_dose
         {
             return None;
         }
@@ -75,13 +83,23 @@ impl Neuron {
 
         match self.decide(glut, gaba) {
             true => Some(self.fire()),
-            false => None,
+            false => {
+                // Flash neurons preserve their glutamate charge when suppressed (D2 holding gate high).
+                // Without this, glut_after_gate() consumes glut even on failed decide(),
+                // and Flash would lose its charge before DA clears.
+                if self.neuron_type == NeuronType::Flash {
+                    self.glut = glut; // put charge back
+                }
+                None
+            },
         }
     }
 
-    fn register_transmission(&mut self, glut: u16, gaba: u16, dopamine: u16) {
+    pub fn register_transmission(&mut self, glut: u16, gaba: u16, dopamine: u16, enkephalin: u16, dynorphin: u16) {
         self.glut += glut;
         self.gaba += gaba;
         self.dopamine += dopamine;
+        self.enkephalin += enkephalin;
+        self.dynorphin += dynorphin;
     }
 }

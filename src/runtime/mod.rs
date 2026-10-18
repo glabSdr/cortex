@@ -5,6 +5,7 @@ mod phase_4;
 mod phase_5;
 mod phase_6;
 mod phase_7;
+mod phase_8;
 
 pub use phase_1::*;
 pub use phase_2::*;
@@ -13,3 +14,4 @@ pub use phase_4::*;
 pub use phase_5::*;
 pub use phase_6::*;
 pub use phase_7::*;
+pub use phase_8::*;

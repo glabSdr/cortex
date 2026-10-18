@@ -1,5 +1,3 @@
-
-
 //Yes, each modulator affects specific gates, but each in its own way.
 // Norepinephrine → glut_gate and gaba_gate (both)
 //
@@ -26,6 +24,20 @@
 // 5-HT (1A) → out_gate += amount  // "don't get distracted, hold the current process"
 // 5-HT (2A) → out_gate -= amount  // "break the current pattern" (psychedelics)
 //
+// Opioid peptides — two separate synaptic channels:
+//
+// Enkephalin (μ-ligand): local interneurons release into synapse
+//   μ on VTA GABA interneuron → GABA↓ → DA disinhibition (DA↑)
+//   μ on LC → out_gate↑ → NE↓ (analgesia, calm)
+//   μ on BLA → out_gate↑ → anxiolysis
+//
+// Dynorphin (κ-ligand): MSN striatum synthesizes via DA→D1→CREB→prodynorphin
+//   κ on VTA DA neuron → out_gate↑ → DA↓ (dysphoria, antireward)
+//   κ on LC → out_gate↓ → NE↑ (stress, anxiety)
+//   κ on BLA → out_gate↓ → anxiogenic
+//
+// Both are synaptic (not volume transmission), modeled like glut/gaba through Shot
+//
 // Summary
 // Modulator	Where it hits	Direction	Effect in one word
 // Norepinephrine	glut_gate, gaba_gate	↓ both	Louder
@@ -34,31 +46,23 @@
 // Acetylcholine	glut_gate (selectively)	↓ on targets	Focus
 // Serotonin (1A)	out_gate	↑	More stable
 // Serotonin (2A)	out_gate	↓	More flexible
+// Enkephalin (μ)	GABA/out_gate	↑	Pleasure / calm
+// Dynorphin (κ)	out_gate	↑ on VTA, ↓ on LC/BLA	Brake / stress
 //
-// Four modulators, three gates, six operations. All orchestration is a combination of these six operations across different neuron groups at different intensities.
+// Six modulators, three gates, ten operations.
 
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
 
 mod compute;
 mod actualize;
 mod manage;
 
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub enum Program {
-    Threat(u16),
-    Disgust(u16),
-    Antireward(u16),
-    Own(u16),
-    Novel(u16),
-    Liking(u16),
-    None
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum NeuronType {
     Logic,
     ThalamusCorticalToCortex,
+    StartRecord,
+    Flash,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -69,16 +73,17 @@ pub struct Source {
 
 pub struct Shot {
     pub from: usize,
-    
-    pub glut_dose: u16, // <= u8::MAX
-    pub gaba_dose: u16, // <= u8::MAX
-    pub dopamine_dose: u16, // <= u8::MAX
 
-    pub execute: [Program; 6],
+    pub glut_dose: u16,        // <= u8::MAX
+    pub gaba_dose: u16,        // <= u8::MAX
+    pub dopamine_dose: u16,    // <= u8::MAX
+    pub enkephalin_dose: u16,  // <= u8::MAX  — μ ligand, synaptic
+    pub dynorphin_dose: u16,   // <= u8::MAX  — κ ligand, synaptic
+
     pub targets: Vec<usize>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Neuron {
     pub id: usize,
 
@@ -93,38 +98,52 @@ pub struct Neuron {
 
     pub last_tic: usize,
 
+    // --- Take pauses (all receptors) ---
     pub a1_take_pause: u16,
     pub a2_take_pause: u16,
     pub ht1a_take_pause: u16,
     pub ht2a_take_pause: u16,
-    
-    pub ne_clearance: u16,
+    pub d1_take_pause: u16,
+    pub d2_take_pause: u16,
+    pub mu_take_pause: u16,
+    pub kappa_take_pause: u16,
 
-    pub glut_gate_baseline: u16,  
+    // --- Clearance ---
+    pub ne_clearance: u16,
+    pub synapse_clearance: u16,
+    pub dopamine_clearance: u16,
+    pub serotonin_clearance: u16,
+    pub enkephalin_clearance: u16,
+    pub dynorphin_clearance: u16,
+
+    // --- Gate baselines ---
+    pub glut_gate_baseline: u16,
     pub gaba_gate_baseline: u16,
-    
+
+    // --- Current synapse levels ---
     pub dopamine: u16,
     pub norepinephrine: u16,
     pub serotonin: u16,
-
-    pub d1_take_pause: u16,
-    pub d2_take_pause: u16,
+    pub enkephalin: u16,
+    pub dynorphin: u16,
 
     pub glut: u16,
     pub gaba: u16,
-    // d1
-    // d2
 
-    pub glut_gate: u16, // <= u8::MAX
-    pub gaba_gate: u16, // <= u8::MAX
-    pub d1_gate: u16, // <= u8::MAX
-    pub d2_gate: u16, // <= u8::MAX
-    pub a1_gate: u16, // <= u8::MAX
-    pub a2_gate: u16, // <= u8::MAX
-    pub b1_gate: u16, // <= u8::MAX
-    pub ht1a_gate: u16, // <= u8::MAX
-    pub ht2a_gate: u16, // <= u8::MAX
+    // --- Receptor gates ---
+    pub glut_gate: u16,     // <= u8::MAX
+    pub gaba_gate: u16,     // <= u8::MAX
+    pub d1_gate: u16,       // <= u8::MAX
+    pub d2_gate: u16,       // <= u8::MAX
+    pub a1_gate: u16,       // <= u8::MAX
+    pub a2_gate: u16,       // <= u8::MAX
+    pub b1_gate: u16,       // <= u8::MAX
+    pub ht1a_gate: u16,     // <= u8::MAX
+    pub ht2a_gate: u16,     // <= u8::MAX
+    pub mu_gate: u16,       // <= u8::MAX
+    pub kappa_gate: u16,    // <= u8::MAX
 
+    // --- Receptor sensitivities ---
     pub d1_sensitivity: u16,
     pub d2_sensitivity: u16,
     pub a1_sensitivity: u16,
@@ -132,30 +151,56 @@ pub struct Neuron {
     pub b1_sensitivity: u16,
     pub ht1a_sensitivity: u16,
     pub ht2a_sensitivity: u16,
+    pub mu_sensitivity: u16,
+    pub kappa_sensitivity: u16,
 
-    pub synapse_clearance: u16,
-    pub dopamine_clearance: u16,
-    pub serotonin_clearance: u16,
-
+    // --- Output gate ---
     pub out_gate: u16,
 
-    pub programs: [Program; 6],
-
+    // --- Output balances ---
     pub glut_out_balance: u16,
     pub gaba_out_balance: u16,
     pub dopamine_out_balance: u16,
+    pub enkephalin_out_balance: u16,
+    pub dynorphin_out_balance: u16,
+    pub serotonin_out_balance: u16,
+    pub ne_out_balance: u16,
 
     pub glut_out_max_balance: u16,
     pub gaba_out_max_balance: u16,
     pub dopamine_out_max_balance: u16,
+    pub enkephalin_out_max_balance: u16,
+    pub dynorphin_out_max_balance: u16,
+    pub serotonin_out_max_balance: u16,
+    pub ne_out_max_balance: u16,
 
-    pub glut_dose: u16, // <= u8::MAX
-    pub gaba_dose: u16,  // <= u8::MAX
-    pub dopamine_dose: u16, // <= u8::MAX
+    // --- Output doses ---
+    pub glut_dose: u16,      // <= u8::MAX
+    pub gaba_dose: u16,      // <= u8::MAX
+    pub dopamine_dose: u16,  // <= u8::MAX
+    pub enkephalin_dose: u16,
+    pub dynorphin_dose: u16,
+    pub serotonin_dose: u16,
+    pub ne_dose: u16,
 
+    // --- Dynorphin feedback loop (MSN/striatum only) ---
+    pub dynorphin_accumulator: u16,   // accumulates DA level each tick
+    pub dynorphin_threshold: u16,     // DA threshold to trigger prodynorphin transcription
+    pub dynorphin_delay: u16,         // ticks delay (gene transcription simulation)
+    pub dynorphin_counter: u16,       // ticks since threshold exceeded
+
+    // --- State ---
     pub fired_this_tic: bool,
 
     pub targets: Vec<usize>,
 
-    pub dead: bool
+    pub dead: bool,
+
+    /// Whether this neuron participates in Flash snapshots.
+    /// Infrastructure neurons (RF, VTA, LC, DRN, VTA_GABA, Flash, StartRecord)
+    /// set this to false. Default true for backward compat with old mesh.jsonl.
+    #[serde(default = "default_recordable")]
+    pub recordable: bool,
 }
+
+fn default_recordable() -> bool { true }

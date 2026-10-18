@@ -18,10 +18,6 @@ use crate::neuron::Neuron;
 const HT_TAKE: u16 = 2;
 
 impl Neuron {
-    pub fn diffuse_serotonin(&mut self, serotonin: u16) {
-        self.serotonin = serotonin;
-    }
-
     fn download_serotonin(&mut self) -> (u16, u16) {
         if self.ht1a_take_pause == 0 && self.ht2a_take_pause == 0 {
             self.serotonin = 0;

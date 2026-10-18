@@ -17,10 +17,6 @@ use crate::neuron::Neuron;
 const NE_TAKE: u16 = 2;
 
 impl Neuron {
-    pub fn diffuse_norepinephrine(&mut self, norepinephrine: u16) {
-        self.norepinephrine = norepinephrine;
-    }
-
     fn download_norepinephrine(&mut self) -> (u16, u16) {
         if self.a1_take_pause == 0 && self.a2_take_pause == 0 {
             self.norepinephrine = 0;

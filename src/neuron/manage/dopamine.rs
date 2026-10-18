@@ -19,10 +19,6 @@ const DOPAMINE_TAKE: u16 = 2;
 const PLASTICITY_BASE_DELTA: u16 = 3; // bdnf_weight_delta, from genetics in the future
 
 impl Neuron {
-    pub fn diffuse_dopamine(&mut self, dopamine: u16) {
-        self.dopamine = dopamine;
-    }
-
     fn download_dopamine(&mut self) -> (u16, u16) {
         if self.d1_take_pause == 0 && self.d2_take_pause == 0 {
             self.dopamine = 0;
@@ -52,8 +48,8 @@ impl Neuron {
                 d2_counter = self.d2_take_pause;
             }
 
-            d1_counter -= 1;
-            d2_counter -= 1;
+            d1_counter = d1_counter.saturating_sub(1);
+            d2_counter = d2_counter.saturating_sub(1);
         }
 
         if d1 < self.d1_gate {
