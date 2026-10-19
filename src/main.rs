@@ -9,6 +9,28 @@ use crate::neuron::Shot;
 use crate::runtime::NeuronEvent;
 
 fn main() {
+    // ── Load .env ──
+    match dotenvy::dotenv() {
+        Ok(path) => println!(".env loaded from: {:?}", path),
+        Err(e) => println!(".env not loaded: {}", e),
+    }
+
+    let pg_conn = std::env::var("PG_CONNECTION")
+        .expect("PG_CONNECTION not set");
+    let redis_url = std::env::var("REDIS_URL")
+        .expect("REDIS_URL not set");
+
+    // ── Memory store: Postgres + Redis ──
+    let store = persistence::bridge::Bridge::connect(
+        &pg_conn,
+        &redis_url,
+        384,   // vector_dim
+        0.85,  // novelty_threshold
+    ).expect("failed to connect memory store");
+    println!("Memory store connected (pg + redis)\n");
+
+
+
     println!("=== Experiment 4: Avoidance + Liking + Flash ===\n");
 
     let ring_ids: Vec<usize> = vec![3, 4, 5, 6];
