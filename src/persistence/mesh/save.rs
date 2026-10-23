@@ -2,15 +2,15 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Write, BufWriter};
 use std::path::Path;
-use crate::neuron::Neuron;
+use cortical_neuron::CorticalNeuron;
 use crate::persistence::mesh::MESH_FILE;
 use crate::persistence::mesh::read_all::read_all;
 
-pub fn save(neurons: Vec<Neuron>) {
+pub fn save(neurons: Vec<CorticalNeuron>) {
     let path = Path::new("./").join(MESH_FILE);
 
     // Read the current state
-    let mut existing: HashMap<usize, Neuron> = read_all()
+    let mut existing: HashMap<usize, CorticalNeuron> = read_all()
         .into_iter()
         .map(|n| (n.id, n))
         .collect();
@@ -21,7 +21,7 @@ pub fn save(neurons: Vec<Neuron>) {
     }
 
     // Collect and sort by id
-    let mut all: Vec<Neuron> = existing.into_values().collect();
+    let mut all: Vec<CorticalNeuron> = existing.into_values().collect();
     all.sort_by_key(|n| n.id);
 
     // Rewrite the file

@@ -1,6 +1,7 @@
-use crate::neuron::{Neuron, Shot};
+use cortical_neuron::{CorticalNeuron, Shot};
 
-pub fn phase_4(mesh: &mut Vec<Neuron>, shots: &Vec<Shot>) {
+
+pub fn phase_4(mesh: &mut Vec<CorticalNeuron>, shots: &Vec<Shot>) {
     // Phase 4: deliver synaptic transmitters (glut, gaba, enkephalin, dynorphin)
     for shot in shots.iter() {
         for &target in &shot.targets {

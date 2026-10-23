@@ -1,6 +1,6 @@
-use crate::neuron::Neuron;
+use cortical_neuron::CorticalNeuron;
 
-pub fn phase_5(mesh: &mut Vec<Neuron>, _ring_ids: &Vec<usize>, vta_fired: bool) {
+pub fn phase_5(mesh: &mut Vec<CorticalNeuron>, _ring_ids: &Vec<usize>, vta_fired: bool) {
     // Phase 5: DA broadcast (VTA → all neurons, volume transmission)
     // Neurons without D1/D2 receptors ignore DA (dopamine_apply returns early)
     if vta_fired {

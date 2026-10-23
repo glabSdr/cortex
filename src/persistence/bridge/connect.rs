@@ -7,10 +7,10 @@ impl Bridge {
         redis_url: &str,
         vector_dim: i32,
         novelty_threshold: f64,
-    ) -> Result<Self, StoreError> {
-        let mut client = Client::connect(pg_connection_string, NoTls)?;
+    ) -> Self {
+        let mut client = Client::connect(pg_connection_string, NoTls).unwrap();
 
-        client.execute("CREATE EXTENSION IF NOT EXISTS vector", &[])?;
+        client.execute("CREATE EXTENSION IF NOT EXISTS vector", &[]).unwrap();
 
         client.execute(
             "CREATE TABLE IF NOT EXISTS knowledge_store (
@@ -20,7 +20,7 @@ impl Bridge {
             to_id   BIGINT NULL
         )",
             &[],
-        )?;
+        ).unwrap();
 
         client.execute(
             &format!(
@@ -31,7 +31,7 @@ impl Bridge {
             )"
             ),
             &[],
-        )?;
+        ).unwrap();
 
         client.execute(
             &format!(
@@ -41,11 +41,11 @@ impl Bridge {
              WITH (m = 16, ef_construction = 64)"
             ),
             &[],
-        )?;
+        ).unwrap();
 
-        let redis_client = redis::Client::open(redis_url)?;
-        let redis = redis_client.get_connection()?;
+        let redis_client = redis::Client::open(redis_url).unwrap();
+        let redis = redis_client.get_connection().unwrap();
 
-        Ok(Self { client, redis, vector_dim, novelty_threshold })
+        Self { client, redis, vector_dim, novelty_threshold }
     }
 }

@@ -1,10 +1,10 @@
 use crate::mesh::ActivityRecorder;
-use crate::neuron::Neuron;
+use cortical_neuron::CorticalNeuron;
 
 impl ActivityRecorder {
     /// Record which recordable neurons fired this tick.
     /// Called every tick after phase_2 (execute).
-    pub fn record_tick(&mut self, mesh: &[Neuron], tick: usize) {
+    pub fn record_tick(&mut self, mesh: &[CorticalNeuron], tick: usize) {
         // Ensure history is large enough
         while self.history.len() <= tick {
             self.history.push(Vec::new());

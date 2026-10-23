@@ -1,21 +1,36 @@
-use crate::neuron::Neuron;
+use crate::helpers::{DRN_OUTPUT, FLASH_YES, LC_OUTPUT, STOP_VTA_GABA_OUT, VTA_INPUT, VTA_OUTPUT};
+use cortical_neuron::CorticalNeuron;
 
-pub fn log_summary(mesh: &[Neuron], ring_ids: &[usize]) {
+pub fn log_summary(mesh: &[CorticalNeuron], ring_ids: &[usize]) {
     println!("\n=== Summary ===");
-    println!("DRN[10]: serotonin_bal={}/{}", mesh[10].serotonin_out_balance, mesh[10].serotonin_out_max_balance);
-    println!("LC[7]:   ne_bal={}/{}", mesh[7].ne_out_balance, mesh[7].ne_out_max_balance);
-    println!("VTA_GABA[11]: gaba_bal={}/{}, out_gate={}/{}, enk={}",
-             mesh[11].gaba_out_balance, mesh[11].gaba_out_max_balance,
-             mesh[11].out_gate, mesh[11].out_gate_baseline, mesh[11].enkephalin);
-    println!("VTA[2]: da_bal={}/{}, out_gate={}/{}, gaba={}",
-             mesh[2].dopamine_out_balance, mesh[2].dopamine_out_max_balance,
-             mesh[2].out_gate, mesh[2].out_gate_baseline, mesh[2].gaba);
-    println!("Freeze[9]: gaba_bal={}/{}", mesh[9].gaba_out_balance, mesh[9].gaba_out_max_balance);
+    println!("VTA_OUTPUT[{}]: da_bal={}/{}, out_gate={}/{}",
+             VTA_OUTPUT,
+             mesh[VTA_OUTPUT].dopamine_out_balance, mesh[VTA_OUTPUT].dopamine_out_max_balance,
+             mesh[VTA_OUTPUT].out_gate, mesh[VTA_OUTPUT].out_gate_baseline);
+    println!("LC_OUTPUT[{}]:  ne_bal={}/{}, out_gate={}/{}",
+             LC_OUTPUT,
+             mesh[LC_OUTPUT].ne_out_balance, mesh[LC_OUTPUT].ne_out_max_balance,
+             mesh[LC_OUTPUT].out_gate, mesh[LC_OUTPUT].out_gate_baseline);
+    println!("DRN_OUTPUT[{}]: ht_bal={}/{}, out_gate={}/{}",
+             DRN_OUTPUT,
+             mesh[DRN_OUTPUT].serotonin_out_balance, mesh[DRN_OUTPUT].serotonin_out_max_balance,
+             mesh[DRN_OUTPUT].out_gate, mesh[DRN_OUTPUT].out_gate_baseline);
+    println!("VTA_INPUT[{}]:  out_gate={}/{}, κ-dyn={}",
+             VTA_INPUT,
+             mesh[VTA_INPUT].out_gate, mesh[VTA_INPUT].out_gate_baseline,
+             mesh[VTA_INPUT].dynorphin);
     for &rid in ring_ids {
         let n = &mesh[rid];
-        println!("Ring[{}]: glut_bal={}/{}, out_gate={}/{}",
+        println!("VTA_TONIC[{}]: glut_bal={}/{}, out_gate={}/{}",
                  rid, n.glut_out_balance, n.glut_out_max_balance,
                  n.out_gate, n.out_gate_baseline);
     }
+    println!("FLASH_YES[{}]: out_gate={}/{}, d2_gate={}",
+             FLASH_YES,
+             mesh[FLASH_YES].out_gate, mesh[FLASH_YES].out_gate_baseline,
+             mesh[FLASH_YES].d2_gate);
+    println!("STOP_VTA_GABA[{}]: gaba_bal={}/{}, out_gate={}/{}",
+             STOP_VTA_GABA_OUT,
+             mesh[STOP_VTA_GABA_OUT].gaba_out_balance, mesh[STOP_VTA_GABA_OUT].gaba_out_max_balance,
+             mesh[STOP_VTA_GABA_OUT].out_gate, mesh[STOP_VTA_GABA_OUT].out_gate_baseline);
 }
-

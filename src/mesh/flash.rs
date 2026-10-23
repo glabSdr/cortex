@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use crate::mesh::{ActivityRecorder, FlashResult};
-use crate::neuron::Neuron;
+use cortical_neuron::CorticalNeuron;
 
 impl ActivityRecorder {
     /// Flash neuron fired — create connections based on recorded activity.
     /// Returns a description of what was created for logging.
-    pub fn flash(&mut self, mesh: &mut Vec<Neuron>, tick: usize) -> Option<FlashResult> {
+    pub fn flash(&mut self, mesh: &mut Vec<CorticalNeuron>, tick: usize) -> Option<FlashResult> {
         if !self.recording {
             return None;
         }

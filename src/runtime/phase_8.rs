@@ -1,6 +1,6 @@
-use crate::neuron::Neuron;
+use cortical_neuron::CorticalNeuron;
 
-pub fn phase_8(mesh: &mut Vec<Neuron>) {
+pub fn phase_8(mesh: &mut Vec<CorticalNeuron>) {
     // Phase 8: apply all neuromodulators
     let active: Vec<bool> = mesh.iter().map(|n| n.fired_this_tic).collect();
     for n in mesh.iter_mut() {

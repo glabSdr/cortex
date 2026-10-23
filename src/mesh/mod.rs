@@ -4,7 +4,7 @@ mod start_record;
 mod record_tick;
 
 use std::collections::HashMap;
-use crate::neuron::{Neuron, Source};
+use cortical_neuron::Source;
 
 /// Tracks neuron firing history and performs Flash snapshots
 /// to create associative connections between co-active neurons.

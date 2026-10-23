@@ -1,10 +1,12 @@
 use crate::helpers::colorize::colorize;
-use crate::neuron::Neuron;
+use crate::helpers::{DRN_OUTPUT, FLASH, FLASH_YES, LC_OUTPUT, VTA_INPUT, VTA_OUTPUT};
 use crate::runtime::NeuronEvent;
+use cortical_neuron::CorticalNeuron;
 
-pub fn log_tic(mesh: &[Neuron], tic: usize, _ring_ids: &[usize], events: &[NeuronEvent]) {
+
+pub fn log_tic(mesh: &[CorticalNeuron], tic: usize, ring_ids: &[usize], events: &[NeuronEvent]) {
     let dot = |id: usize| -> &str {
-        if mesh[id].fired_this_tic { "•" } else { " " }
+        if id < mesh.len() && mesh[id].fired_this_tic { "•" } else { " " }
     };
 
     let colored_events: String = if events.is_empty() {
@@ -16,10 +18,16 @@ pub fn log_tic(mesh: &[Neuron], tic: usize, _ring_ids: &[usize], events: &[Neuro
             .join(" ")
     };
 
-    println!("{:<5} {:>3} {:>3} {:>3} {:>3} {:>3} {:>3} {:>3} {:>3} {:>3} {:>3}  {:>3} {:>3} {:>3} {:>3}  {:>3} {:>3} {:>3} {:>3}  {}",
+    let flash_dot = if FLASH < mesh.len() && mesh[FLASH].fired_this_tic { "!" } else { " " };
+
+    println!("{:<5} {:>3} {:>3} {:>3}  {:>3} {:>3} {:>3} {:>3}  {:>3} {:>3}  {:>3} {:>3}  {}",
              tic,
-             dot(0), dot(2), dot(7), dot(8), dot(9), dot(10), dot(11), dot(12), dot(15), dot(16),
-             mesh[3].glut, mesh[4].glut, mesh[5].glut, mesh[6].glut,
-             mesh[3].out_gate, mesh[4].out_gate, mesh[5].out_gate, mesh[6].out_gate,
+             dot(VTA_OUTPUT), dot(LC_OUTPUT), dot(DRN_OUTPUT),
+             mesh[ring_ids[0]].glut, mesh[ring_ids[1]].glut,
+             mesh[ring_ids[2]].glut, mesh[ring_ids[3]].glut,
+             mesh[VTA_INPUT].glut,
+             mesh[VTA_INPUT].out_gate,
+             mesh[FLASH_YES].out_gate,
+             flash_dot,
              colored_events);
 }
