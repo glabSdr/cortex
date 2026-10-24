@@ -11,16 +11,11 @@ pub struct StdpEvent {
 }
 
 /// DA modulation for three-factor learning rule.
-/// Returns modulated strength based on how recently VTA fired.
-/// If VTA fired this tick or 1 tick ago → full strength.
-/// Decays linearly to 0 over `window` ticks.
-/// If VTA never fired (vta_last_fire=0) → strength unchanged (baseline learning).
-/// DA modulation for three-factor learning rule.
-/// Uses PHASIC VTA signal (VTA_INPUT fires = reward-predicting stimulus).
+/// Uses PHASIC reward signal (N10 ENKEPHALIN_TO_VTA fires = actual reward).
 /// Tonic VTA firing does NOT gate plasticity.
 ///
-/// If VTA_INPUT fired recently → full strength, decaying linearly to 0.
-/// If VTA_INPUT never fired or fired long ago → 0 (no learning without phasic DA).
+/// If reward fired recently → full strength, decaying linearly to 0.
+/// If reward never fired or fired long ago → 0 (no learning without phasic DA).
 fn da_modulate(strength: u16, tic: usize, vta_phasic_last: usize, window: usize) -> u16 {
     if vta_phasic_last == 0 {
         return 0;  // no phasic DA ever → no DA-gated learning
@@ -34,6 +29,24 @@ fn da_modulate(strength: u16, tic: usize, vta_phasic_last: usize, window: usize)
     result
 }
 
+/// Serotonin plasticity modulation.
+/// 5-HT sets the global "learning rate" — it doesn't choose WHICH synapses
+/// change (that's DA's job), it controls HOW MUCH they can change.
+///
+/// Hierarchy: final_strength = STDP_timing × DA_reward × 5HT_regime
+///
+/// 5-HT1A >> 5-HT2A → suppressed plasticity (exploitation mode, "don't change")
+/// 5-HT1A ≈  5-HT2A → normal plasticity
+/// 5-HT2A >> 5-HT1A → enhanced plasticity (exploration mode, "rewrite allowed")
+///
+/// Returns a factor in 0..512 range (256 = neutral = ×1.0)
+fn ht_plasticity_factor(ht1a_cached: u16, ht2a_cached: u16) -> u32 {
+    // 256 = neutral. 2A enhances (adds), 1A suppresses (subtracts).
+    // Clamp to 0..512 to prevent extreme swings.
+    let factor = (256u32 + ht2a_cached as u32).saturating_sub(ht1a_cached as u32);
+    factor.min(512)
+}
+
 /// Phase 9: Spike-Timing Dependent Plasticity (STDP)
 ///
 /// Runs AFTER all neuromodulators are applied (phase_8).
@@ -43,15 +56,14 @@ fn da_modulate(strength: u16, tic: usize, vta_phasic_last: usize, window: usize)
 ///   pre fires AFTER  post (anti-causal)     → LTD (weight ↓)
 ///
 /// Effect magnitude decays linearly with |Δt| within the STDP window.
-/// Optionally gated by dopamine (three-factor learning rule):
-///   STDP_effect × (dopamine / 255)
+///
+/// Three modulation layers (hierarchical):
+///   1. STDP timing: base strength from spike coincidence
+///   2. DA gating: phasic reward selects WHICH synapses change
+///   3. 5-HT regime: serotonin sets HOW MUCH change is allowed
 ///
 /// Only neurons with stdp_enabled=true have their input weights modified.
 /// last_fired_tic is updated for ALL neurons (needed as source info).
-///
-/// `vta_last_fire`: tick when VTA last fired (0 = never). Used for DA gating:
-/// phasic DA opens a plasticity window. Learning is strongest right after
-/// VTA fire and decays over the neuron's stdp_window.
 pub fn phase_9(mesh: &mut Vec<CorticalNeuron>, tic: usize, vta_last_fire: usize) -> Vec<StdpEvent> {
     let mut events: Vec<StdpEvent> = Vec::new();
     let n = mesh.len();
@@ -71,6 +83,12 @@ pub fn phase_9(mesh: &mut Vec<CorticalNeuron>, tic: usize, vta_last_fire: usize)
         let ltp_rate = mesh[post_id].ltp_rate as u32;
         let weight_max = mesh[post_id].weight_max;
         let da_gated = mesh[post_id].stdp_da_gated;
+        let ht_mod = mesh[post_id].stdp_ht_modulated;
+        let ht_factor = if ht_mod {
+            ht_plasticity_factor(mesh[post_id].ht1a_cached, mesh[post_id].ht2a_cached)
+        } else {
+            256 // neutral
+        };
 
         for src_idx in 0..mesh[post_id].sources.len() {
             let pre_id = mesh[post_id].sources[src_idx].from;
@@ -86,10 +104,16 @@ pub fn phase_9(mesh: &mut Vec<CorticalNeuron>, tic: usize, vta_last_fire: usize)
             let mut strength = (ltp_rate * (window - dt) as u32 / window as u32) as u16;
             if strength == 0 { strength = 1; } // at least +1 within window
 
-            // Three-factor DA modulation: phasic DA gates plasticity
-            // VTA fired recently → full learning; fades with distance
+            // Layer 2: DA gating — phasic reward selects which synapses learn
             if da_gated {
                 strength = da_modulate(strength, tic, vta_last_fire, window);
+            }
+
+            // Layer 3: 5-HT regime — serotonin scales learning rate globally
+            // 5-HT1A high → suppressed (factor < 256)
+            // 5-HT2A high → enhanced  (factor > 256)
+            if ht_factor != 256 && strength > 0 {
+                strength = (strength as u32 * ht_factor / 256) as u16;
             }
 
             if strength > 0 {
@@ -109,7 +133,6 @@ pub fn phase_9(mesh: &mut Vec<CorticalNeuron>, tic: usize, vta_last_fire: usize)
     // ── LTD: for each pre-synaptic neuron that fired this tick ──
     // Check its targets — if a target fired recently BEFORE this tick
     // (post before pre = anti-causal), weaken the synapse.
-    // We need targets list, which we clone to avoid borrow issues.
     let targets_snapshot: Vec<Vec<usize>> = mesh.iter()
         .map(|n| n.targets.clone())
         .collect();
@@ -128,6 +151,12 @@ pub fn phase_9(mesh: &mut Vec<CorticalNeuron>, tic: usize, vta_last_fire: usize)
             let ltd_rate = mesh[post_id].ltd_rate as u32;
             let weight_min = mesh[post_id].weight_min;
             let da_gated = mesh[post_id].stdp_da_gated;
+            let ht_mod = mesh[post_id].stdp_ht_modulated;
+            let ht_factor = if ht_mod {
+                ht_plasticity_factor(mesh[post_id].ht1a_cached, mesh[post_id].ht2a_cached)
+            } else {
+                256
+            };
 
             // post must have fired before this tick and within the window
             if post_last == 0 || post_last >= tic { continue; }
@@ -138,13 +167,17 @@ pub fn phase_9(mesh: &mut Vec<CorticalNeuron>, tic: usize, vta_last_fire: usize)
             let mut strength = (ltd_rate * (window - dt) as u32 / window as u32) as u16;
             if strength == 0 { strength = 1; }
 
-            // Three-factor DA modulation
+            // Layer 2: DA gating
             if da_gated {
                 strength = da_modulate(strength, tic, vta_last_fire, window);
             }
 
+            // Layer 3: 5-HT regime
+            if ht_factor != 256 && strength > 0 {
+                strength = (strength as u32 * ht_factor / 256) as u16;
+            }
+
             if strength > 0 {
-                // Find the source entry for this pre→post synapse
                 if let Some(src) = mesh[post_id].sources.iter_mut().find(|s| s.from == pre_id) {
                     let old = src.weight;
                     src.weight = src.weight.saturating_sub(strength).max(weight_min);
